@@ -2,10 +2,13 @@ package controller
 
 import "fmt"
 import "net/http"
+import "sync"
 
 var actionHandlers map[string]func(*http.ResponseWriter, *http.Request) = make(map[string]func(*http.ResponseWriter, *http.Request))
+var mutex *sync.Mutex
 
 func init() {
+    mutex = new(sync.Mutex)
     actionHandlers["backup"] = func(responseWriter *http.ResponseWriter, request *http.Request) {
         responseHeader := (*responseWriter).Header()
         responseHeader.Set("Content-Type", "text/html")
@@ -59,6 +62,7 @@ func init() {
 }
 
 func Handle(responseWriter http.ResponseWriter, request *http.Request) {
+    mutex.Lock()
     if action, ok := request.URL.Query()["action"]; ok {
         if _, ok := actionHandlers[action[0]]; ok {
             actionHandlers[action[0]](&responseWriter, request)
@@ -68,5 +72,6 @@ func Handle(responseWriter http.ResponseWriter, request *http.Request) {
     } else {
         actionHandlers["default"](&responseWriter, request)
     }
+    mutex.Unlock()
 }
 
